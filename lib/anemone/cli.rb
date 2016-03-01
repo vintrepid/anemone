@@ -1,6 +1,6 @@
 module Anemone
   module CLI
-    COMMANDS = %w[count cron pagedepth serialize url-list]
+    COMMANDS = %w[count cron mobile pagedepth serialize url-list]
     
     def self.run
       command = ARGV.shift
