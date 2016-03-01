@@ -1,6 +1,8 @@
 require 'anemone'
 require 'optparse'
 require 'ostruct'
+require 'cli-colorize'
+require 'byebug'
 
 options = OpenStruct.new
 options.relative = false
@@ -33,11 +35,42 @@ opts.on('-r', '--relative')        { options.relative = true }
 opts.on('-o', '--output filename') {|o| options.output_file = o }
 opts.parse!(ARGV)
 
-Anemone.crawl(root, {:discard_page_bodies => true}) do |anemone|  
-  
+root_str = root.to_s
+
+started_at = Time.now
+
+puts "Starting crawl at #{started_at}"
+
+Anemone.crawl(root, {:discard_page_bodies => true}) do |anemone|
+
+  anemone.focus_crawl do |page|
+    page.links.reject do |link|
+      (link.to_s.include?("/trip/") && link.to_s[-9..-1]=="/download") ||
+       link.to_s.include?("/brochure/") ||
+       link.to_s.include?("/kilimanjaro/") ||
+       link.to_s.include?("/publish")
+    end
+  end
+
+  anemone.on_every_page do |page|
+    begin
+      page_status = "#{page.code}  #{page.depth}  %4.2fs #{page.body.size.to_s.rjust(10,' ')} #{page.url.to_s.gsub(root_str,'')}" % (page.response_time.to_f / 1000)
+    rescue
+      page_status = "#{page.code}  #{page.depth}  #{(page.response_time.to_f / 1000)}s #{page.body.size.to_s.rjust(10,' ')} #{page.url.to_s.gsub(root_str,'')}"
+    end
+    page_status = page_status.blue if page.code >= 300 and page.code < 400
+    page_status = page_status.red if page.code >= 400
+    puts page_status
+  end
+
   anemone.after_crawl do |pages|
-    puts "Crawl results for #{root}\n"
-    
+    ended_at = Time.now
+
+    puts "Crawl results for #{root}\n\n"
+    puts "Crawl started at #{started_at}"
+    puts "        ended at #{ended_at}"
+    puts "Crawl took #{(ended_at - started_at) / 60} minutes..."
+
     # print a list of 404's
     not_found = []
     pages.each_value do |page|
@@ -59,14 +92,68 @@ Anemone.crawl(root, {:discard_page_bodies => true}) do |anemone|
           puts "  linked from #{u}"
         end
         
-        puts " ..." if links.size > 10
+        puts " ... (and #{links.size - 11} more)" if links.size > 11
+      end
+
+      print "\n"
+    end  
+
+    # print a list of 301's
+    redirected = []
+    pages.each_value do |page|
+      url = page.url.to_s
+      redirected << url if page.redirect?
+    end
+    unless redirected.empty?
+      puts "\n301's:"
+
+      missing_links = pages.urls_linking_to(redirected)
+      missing_links.each do |url, links|
+        if options.relative
+          puts URI(url).path.to_s
+        else
+          puts url
+        end
+        links.slice(0..10).each do |u|
+          u = u.path if options.relative
+          puts "  linked from #{u}"
+        end
+        
+        puts " ... (and #{links.size - 11} more)" if links.size > 11
+      end
+
+      print "\n"
+    end  
+
+    # print a list of errors
+    redirected = []
+    pages.each_value do |page|
+      url = page.url.to_s
+      redirected << url if page.code >= 500
+    end
+    unless redirected.empty?
+      puts "\nErrors:"
+
+      missing_links = pages.urls_linking_to(redirected)
+      missing_links.each do |url, links|
+        if options.relative
+          puts URI(url).path.to_s
+        else
+          puts url
+        end
+        links.slice(0..10).each do |u|
+          u = u.path if options.relative
+          puts "  linked from #{u}"
+        end
+        
+        puts " ... (and #{links.size - 11} more)" if links.size > 11
       end
 
       print "\n"
     end  
     
     # remove redirect aliases, and calculate pagedepths
-    pages = pages.shortest_paths!(root).uniq
+    pages = pages.shortest_paths!(root).uniq!
     depths = pages.values.inject({}) do |depths, page|
       depths[page.depth] ||= 0
       depths[page.depth] += 1
@@ -81,10 +168,9 @@ Anemone.crawl(root, {:discard_page_bodies => true}) do |anemone|
     
     # output a list of urls to file
     file = open(options.output_file, 'w')
-    pages.each_key do |url|
-      url = options.relative ? url.path.to_s : url.to_s
+    pages.each_value do |page|
+      url = options.relative ? page.url.path.to_s : url.to_s
       file.puts url
     end
   end
-  
 end
