@@ -14,7 +14,7 @@ begin
 rescue
   puts <<-INFO
 Usage:
-  anemone cron [options] <url>
+  anemone desktop [options] <url>
 
 Synopsis:
   Combination of `count`, `pagedepth` and `url-list` commands.
@@ -39,9 +39,9 @@ root_str = root.to_s
 
 started_at = Time.now
 
-puts "Starting desktop crawl at #{started_at}"
+puts "Starting crawl at #{started_at}"
 
-crawler = Anemone::Core.new(root, {:discard_page_bodies => true}) do |anemone|
+Anemone.crawl(root, {:discard_page_bodies => true}) do |anemone|
 
   anemone.focus_crawl do |page|
     page.links.reject do |link|
@@ -174,11 +174,3 @@ crawler = Anemone::Core.new(root, {:discard_page_bodies => true}) do |anemone|
     end
   end
 end
-
-crawler.run
-
-
-crawler.opts[:user_agent] = "iPhone"
-started_at = Time.now
-puts "Starting mobile crawl at #{started_at}"
-crawler.run
