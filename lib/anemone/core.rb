@@ -201,7 +201,7 @@ module Anemone
       @pages = PageStore.new(storage)
       @robots = Robotex.new(@opts[:user_agent]) if @opts[:obey_robots_txt]
 
-      freeze_options
+      #freeze_options
     end
 
     #
