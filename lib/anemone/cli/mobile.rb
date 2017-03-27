@@ -41,8 +41,8 @@ started_at = Time.now
 
 puts "Starting mobile crawl at #{started_at}"
 
-Anemone.crawl(root, {:discard_page_bodies => true, :user_agent => "iPhone",
-}) do |anemone|
+Anemone.crawl(root, {discard_page_bodies: true, user_agent: "iPhone",
+accept_cookies: true}) do |anemone|
 
   anemone.focus_crawl do |page|
     page.links.reject do |link|

@@ -24,6 +24,7 @@ module Anemone
     attr_reader :pages
     # Hash of options for the crawl
     attr_reader :opts
+    attr_accessor :started_at
 
     DEFAULT_OPTS = {
       # run 4 Tentacle threads to fetch pages
@@ -146,6 +147,9 @@ module Anemone
     # Perform the crawl
     #
     def run
+      @started_at = Time.now
+      puts "Starting crawl at #{started_at}"
+      
       process_options
 
       @urls.delete_if { |url| !visit_link?(url) }
