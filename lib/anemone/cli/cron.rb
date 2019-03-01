@@ -37,11 +37,7 @@ opts.parse!(ARGV)
 
 root_str = root.to_s
 
-started_at = Time.now
-
-puts "Starting desktop crawl at #{started_at}"
-
-crawler = Anemone::Core.new(root, {:discard_page_bodies => true}) do |anemone|
+crawler = Anemone::Core.new(root, {discard_page_bodies: true, accept_cookies: true}) do |anemone|
 
   anemone.focus_crawl do |page|
     page.links.reject do |link|
@@ -67,9 +63,9 @@ crawler = Anemone::Core.new(root, {:discard_page_bodies => true}) do |anemone|
     ended_at = Time.now
 
     puts "Crawl results for #{root}\n\n"
-    puts "Crawl started at #{started_at}"
+    puts "Crawl started at #{anemone.started_at}"
     puts "        ended at #{ended_at}"
-    puts "Crawl took #{(ended_at - started_at) / 60} minutes..."
+    puts "Crawl took #{(ended_at - anemone.started_at) / 60} minutes..."
 
     # print a list of 404's
     not_found = []
@@ -177,8 +173,7 @@ end
 
 crawler.run
 
-
-crawler.opts[:user_agent] = "iPhone"
-started_at = Time.now
-puts "Starting mobile crawl at #{started_at}"
-crawler.run
+mobile_crawler = crawler.dup
+crawler = nil
+mobile_crawler.opts[:user_agent] = "iPhone"
+# mobile_crawler.run
